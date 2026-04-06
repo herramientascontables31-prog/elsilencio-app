@@ -501,13 +501,24 @@ const App = (() => {
       let synced = 0;
       for (const record of pending) {
         try {
-          await fetch(config.scriptUrl, {
-            method: 'POST', mode: 'no-cors',
-            headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify(record)
-          });
-          await markSynced(record.id);
-          synced++;
+          // Google Apps Script redirige, necesitamos seguir el redirect
+          // Usamos GET con datos en query param para evitar CORS
+          const payload = encodeURIComponent(JSON.stringify(record));
+          const url = config.scriptUrl + '?action=save&data=' + payload;
+          const resp = await fetch(url, { method: 'GET', redirect: 'follow' });
+          if (resp.ok) {
+            await markSynced(record.id);
+            synced++;
+          } else {
+            // Fallback: intentar con no-cors POST
+            await fetch(config.scriptUrl, {
+              method: 'POST', mode: 'no-cors',
+              headers: { 'Content-Type': 'text/plain' },
+              body: JSON.stringify(record)
+            });
+            await markSynced(record.id);
+            synced++;
+          }
         } catch (err) { console.error('Sync error:', record.id, err); }
       }
 

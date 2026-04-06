@@ -519,20 +519,24 @@ const App = (() => {
     }
   }
 
-  // Enviar datos al Sheet usando Image (bypass CORS garantizado)
-  function sendToSheet(scriptUrl, record) {
-    return new Promise((resolve) => {
-      const payload = encodeURIComponent(JSON.stringify(record));
-      const url = scriptUrl + '?action=save&data=' + payload;
-      const img = new Image();
-      // La respuesta no es imagen, así que onerror se dispara,
-      // pero la petición SÍ se hizo y el servidor la procesó
-      img.onload = () => resolve(true);
-      img.onerror = () => resolve(true);
-      img.src = url;
-      // Timeout por si acaso
-      setTimeout(() => resolve(true), 12000);
-    });
+  // Enviar datos al Sheet
+  async function sendToSheet(scriptUrl, record) {
+    const payload = encodeURIComponent(JSON.stringify(record));
+    const url = scriptUrl + '?action=save&data=' + payload;
+    try {
+      // Intentar fetch normal (sigue redirects de Google)
+      const resp = await fetch(url, { redirect: 'follow' });
+      return resp.ok;
+    } catch (e1) {
+      try {
+        // Fallback: no-cors (no podemos leer respuesta pero la petición se hace)
+        await fetch(url, { mode: 'no-cors', redirect: 'follow' });
+        return true;
+      } catch (e2) {
+        console.error('sendToSheet failed:', e2);
+        return false;
+      }
+    }
   }
 
   function tryAutoSync() {

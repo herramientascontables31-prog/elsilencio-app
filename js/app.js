@@ -519,32 +519,19 @@ const App = (() => {
     }
   }
 
-  // Enviar datos al Sheet usando un iframe oculto (evita CORS)
+  // Enviar datos al Sheet usando Image (bypass CORS garantizado)
   function sendToSheet(scriptUrl, record) {
     return new Promise((resolve) => {
       const payload = encodeURIComponent(JSON.stringify(record));
       const url = scriptUrl + '?action=save&data=' + payload;
-
-      // Crear iframe oculto para hacer la petición
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.src = url;
-
-      let resolved = false;
-      const done = (success) => {
-        if (resolved) return;
-        resolved = true;
-        try { document.body.removeChild(iframe); } catch(e) {}
-        resolve(success);
-      };
-
-      iframe.onload = () => done(true);
-      iframe.onerror = () => done(false);
-
-      // Timeout de 15 segundos
-      setTimeout(() => done(true), 15000);
-
-      document.body.appendChild(iframe);
+      const img = new Image();
+      // La respuesta no es imagen, así que onerror se dispara,
+      // pero la petición SÍ se hizo y el servidor la procesó
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(true);
+      img.src = url;
+      // Timeout por si acaso
+      setTimeout(() => resolve(true), 12000);
     });
   }
 

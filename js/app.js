@@ -501,21 +501,8 @@ const App = (() => {
       let synced = 0;
       for (const record of pending) {
         try {
-          // Google Apps Script redirige, necesitamos seguir el redirect
-          // Usamos GET con datos en query param para evitar CORS
-          const payload = encodeURIComponent(JSON.stringify(record));
-          const url = config.scriptUrl + '?action=save&data=' + payload;
-          const resp = await fetch(url, { method: 'GET', redirect: 'follow' });
-          if (resp.ok) {
-            await markSynced(record.id);
-            synced++;
-          } else {
-            // Fallback: intentar con no-cors POST
-            await fetch(config.scriptUrl, {
-              method: 'POST', mode: 'no-cors',
-              headers: { 'Content-Type': 'text/plain' },
-              body: JSON.stringify(record)
-            });
+          const ok = await sendToSheet(config.scriptUrl, record);
+          if (ok) {
             await markSynced(record.id);
             synced++;
           }
@@ -530,6 +517,35 @@ const App = (() => {
       if (btn) { btn.disabled = false; btn.textContent = '🔄 Sincronizar ahora'; }
       updateSyncBadge();
     }
+  }
+
+  // Enviar datos al Sheet usando un iframe oculto (evita CORS)
+  function sendToSheet(scriptUrl, record) {
+    return new Promise((resolve) => {
+      const payload = encodeURIComponent(JSON.stringify(record));
+      const url = scriptUrl + '?action=save&data=' + payload;
+
+      // Crear iframe oculto para hacer la petición
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = url;
+
+      let resolved = false;
+      const done = (success) => {
+        if (resolved) return;
+        resolved = true;
+        try { document.body.removeChild(iframe); } catch(e) {}
+        resolve(success);
+      };
+
+      iframe.onload = () => done(true);
+      iframe.onerror = () => done(false);
+
+      // Timeout de 15 segundos
+      setTimeout(() => done(true), 15000);
+
+      document.body.appendChild(iframe);
+    });
   }
 
   function tryAutoSync() {

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#2d6a4f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>El Silencio</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ========== PANTALLA: HOME ========== -->
+  <div id="screen-home" class="screen active">
+    <header class="header">
+      <h1>🐄 El Silencio</h1>
+      <div id="sync-badge" class="sync-badge" onclick="App.showPending()">
+        <span id="sync-icon">✓</span>
+        <span id="sync-count">0 pendientes</span>
+      </div>
+    </header>
+
+    <div class="home-grid">
+      <button class="home-btn home-btn--pesajes" onclick="App.goTo('pesajes')">
+        <span class="home-btn__icon">⚖️</span>
+        <span class="home-btn__label">Pesajes</span>
+        <span class="home-btn__desc">Registrar peso de ganado</span>
+      </button>
+
+      <button class="home-btn home-btn--praderas-c" onclick="App.goTo('praderas-caballos')">
+        <span class="home-btn__icon">🐎</span>
+        <span class="home-btn__label">Praderas Caballos</span>
+        <span class="home-btn__desc">Rotación de potreros</span>
+      </button>
+
+      <button class="home-btn home-btn--praderas-g" onclick="App.goTo('praderas-ganado')">
+        <span class="home-btn__icon">🌿</span>
+        <span class="home-btn__label">Praderas Ganado</span>
+        <span class="home-btn__desc">Rotación de potreros</span>
+      </button>
+
+      <button class="home-btn home-btn--historial" onclick="App.goTo('historial')">
+        <span class="home-btn__icon">📋</span>
+        <span class="home-btn__label">Historial</span>
+        <span class="home-btn__desc">Ver registros guardados</span>
+      </button>
+    </div>
+
+    <div class="home-footer">
+      <button class="btn btn--sync" onclick="App.syncNow()" id="btn-sync">
+        🔄 Sincronizar ahora
+      </button>
+      <button class="btn btn--config" onclick="App.goTo('config')">
+        ⚙️ Configuración
+      </button>
+    </div>
+  </div>
+
+  <!-- ========== PANTALLA: PESAJES ========== -->
+  <div id="screen-pesajes" class="screen">
+    <header class="header">
+      <button class="back-btn" onclick="App.goTo('home')">←</button>
+      <h1>⚖️ Pesaje</h1>
+    </header>
+
+    <form id="form-pesajes" class="form" onsubmit="return App.savePesaje(event)">
+      <div class="form-group">
+        <label for="p-id">Animal (ID / Arete) *</label>
+        <select id="p-id" required>
+          <option value="">-- Seleccionar --</option>
+          <option value="A001">A001</option>
+          <option value="A002">A002</option>
+          <option value="A003">A003</option>
+          <option value="A004">A004</option>
+          <option value="A006">A006</option>
+          <option value="A007">A007</option>
+          <option value="A008">A008</option>
+          <option value="A010">A010</option>
+          <option value="A011">A011</option>
+          <option value="A012">A012</option>
+          <option value="A014">A014</option>
+          <option value="A015">A015</option>
+        </select>
+        <input type="text" id="p-id-manual" placeholder="O escriba el ID manualmente" class="input-alt">
+      </div>
+
+      <div class="form-group">
+        <label for="p-fecha">Fecha del pesaje *</label>
+        <input type="date" id="p-fecha" required>
+      </div>
+
+      <div class="form-group">
+        <label for="p-peso">Peso actual (kg) *</label>
+        <input type="number" id="p-peso" min="1" max="2000" step="0.1" required
+               placeholder="Ej: 285" inputmode="decimal">
+      </div>
+
+      <div class="form-group">
+        <label for="p-peso-ant">Peso pesaje anterior (kg)</label>
+        <input type="number" id="p-peso-ant" min="0" max="2000" step="0.1"
+               placeholder="Último peso registrado" inputmode="decimal">
+      </div>
+
+      <div class="form-group">
+        <label for="p-dias">Días desde último pesaje</label>
+        <input type="number" id="p-dias" min="0" max="999"
+               placeholder="Ej: 60" inputmode="numeric">
+      </div>
+
+      <div class="form-group">
+        <label for="p-obs">Observaciones</label>
+        <textarea id="p-obs" rows="2" placeholder="Opcional"></textarea>
+      </div>
+
+      <button type="submit" class="btn btn--submit">💾 Guardar Pesaje</button>
+    </form>
+  </div>
+
+  <!-- ========== PANTALLA: PRADERAS CABALLOS ========== -->
+  <div id="screen-praderas-caballos" class="screen">
+    <header class="header">
+      <button class="back-btn" onclick="App.goTo('home')">←</button>
+      <h1>🐎 Praderas Caballos</h1>
+    </header>
+
+    <form id="form-praderas-caballos" class="form" onsubmit="return App.savePradera(event, 'caballos')">
+      <div class="form-group">
+        <label for="pc-cuadra">Cuadra *</label>
+        <select id="pc-cuadra" required onchange="App.onCuadraChange('caballos')">
+          <option value="">-- Seleccionar --</option>
+          <option value="1">1 — 2044 m² · 70% pasto amargo y cortadera, 30% grama</option>
+          <option value="2">2 — 1323 m² · 40% cortadera, 60% pasto</option>
+          <option value="3">3 — 1078 m² · 10% pasto amargo, 100% grama</option>
+          <option value="4">4 — 1325 m² · 40% estrella, 60% grama</option>
+          <option value="5">5 — 1099 m² · 100% grama</option>
+          <option value="6">6 — 1637 m² · 100% grama</option>
+          <option value="7">7 — 2555 m² · 100% grama</option>
+          <option value="8">8 — 2051 m²</option>
+          <option value="9">9 — 2086 m²</option>
+          <option value="10">10 — 2535 m²</option>
+          <option value="11">11 — 2307 m²</option>
+          <option value="12">12 — 2385 m²</option>
+          <option value="13">13 — 1876 m²</option>
+          <option value="14">14 — 1216 m²</option>
+          <option value="15">15 — 1062 m²</option>
+        </select>
+      </div>
+
+      <div class="info-box" id="pc-info" style="display:none">
+        <span id="pc-estado-auto" class="estado-tag"></span>
+        <span id="pc-dias-descanso-auto" class="dias-tag"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="pc-carga-real">Cantidad de caballos *</label>
+        <input type="number" id="pc-carga-real" min="0" required inputmode="numeric"
+               placeholder="Ej: 11">
+      </div>
+
+      <div class="form-group">
+        <label for="pc-aforo">Aforo (kg MS/Ha)</label>
+        <input type="number" id="pc-aforo" min="0" step="0.1"
+               placeholder="Opcional" inputmode="decimal">
+      </div>
+
+      <div class="form-group">
+        <label for="pc-fecha-in">Fecha y hora de ingreso *</label>
+        <input type="datetime-local" id="pc-fecha-in" required>
+        <small>Se precarga con la hora actual. Editable si necesita ajustar.</small>
+      </div>
+
+      <div class="form-group">
+        <label for="pc-obs">Observaciones</label>
+        <textarea id="pc-obs" rows="2" placeholder="Opcional"></textarea>
+      </div>
+
+      <button type="submit" class="btn btn--submit">💾 Registrar Ingreso</button>
+    </form>
+  </div>
+
+  <!-- ========== PANTALLA: PRADERAS GANADO ========== -->
+  <div id="screen-praderas-ganado" class="screen">
+    <header class="header">
+      <button class="back-btn" onclick="App.goTo('home')">←</button>
+      <h1>🌿 Praderas Ganado</h1>
+    </header>
+
+    <form id="form-praderas-ganado" class="form" onsubmit="return App.savePradera(event, 'ganado')">
+      <div class="form-group">
+        <label for="pg-cuadra">Cuadra *</label>
+        <select id="pg-cuadra" required onchange="App.onCuadraChange('ganado')">
+          <option value="">-- Seleccionar --</option>
+          <option value="11">11 — 0.4524 Ha · 20% Cortadera, 80% Climacuna</option>
+          <option value="12">12 — 0.4233 Ha · 30% cortadera, 70% Climacuna y Grama</option>
+        </select>
+        <input type="number" id="pg-cuadra-manual" placeholder="O escriba # de cuadra nueva" class="input-alt" inputmode="numeric">
+      </div>
+
+      <div class="info-box" id="pg-info" style="display:none">
+        <span id="pg-estado-auto" class="estado-tag"></span>
+        <span id="pg-dias-descanso-auto" class="dias-tag"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="pg-carga-real">Cantidad de animales *</label>
+        <input type="number" id="pg-carga-real" min="0" required inputmode="numeric"
+               placeholder="Ej: 30">
+      </div>
+
+      <div class="form-group">
+        <label for="pg-aforo">Aforo (kg MS/Ha)</label>
+        <input type="number" id="pg-aforo" min="0" step="0.1"
+               placeholder="Opcional" inputmode="decimal">
+      </div>
+
+      <div class="form-group">
+        <label for="pg-fecha-in">Fecha y hora de ingreso *</label>
+        <input type="datetime-local" id="pg-fecha-in" required>
+        <small>Se precarga con la hora actual. Editable si necesita ajustar.</small>
+      </div>
+
+      <div class="form-group">
+        <label for="pg-obs">Observaciones</label>
+        <textarea id="pg-obs" rows="2" placeholder="Opcional"></textarea>
+      </div>
+
+      <button type="submit" class="btn btn--submit">💾 Registrar Ingreso</button>
+    </form>
+  </div>
+
+  <!-- ========== PANTALLA: HISTORIAL ========== -->
+  <div id="screen-historial" class="screen">
+    <header class="header">
+      <button class="back-btn" onclick="App.goTo('home')">←</button>
+      <h1>📋 Historial</h1>
+    </header>
+
+    <div class="tab-bar">
+      <button class="tab active" onclick="App.filterHistory('todos', this)">Todos</button>
+      <button class="tab" onclick="App.filterHistory('pesajes', this)">Pesajes</button>
+      <button class="tab" onclick="App.filterHistory('praderas-caballos', this)">P. Caballos</button>
+      <button class="tab" onclick="App.filterHistory('praderas-ganado', this)">P. Ganado</button>
+    </div>
+
+    <div id="historial-list" class="record-list">
+      <p class="empty-msg">No hay registros aún</p>
+    </div>
+  </div>
+
+  <!-- ========== PANTALLA: CONFIG ========== -->
+  <div id="screen-config" class="screen">
+    <header class="header">
+      <button class="back-btn" onclick="App.goTo('home')">←</button>
+      <h1>⚙️ Configuración</h1>
+    </header>
+
+    <div class="form">
+      <div class="form-group">
+        <label for="cfg-script-url">URL del Google Apps Script</label>
+        <input type="url" id="cfg-script-url" placeholder="https://script.google.com/macros/s/...">
+        <small>Pegar la URL del web app desplegado</small>
+      </div>
+
+      <div class="form-group">
+        <label for="cfg-pin">PIN de acceso (opcional)</label>
+        <input type="number" id="cfg-pin" placeholder="Ej: 1234" inputmode="numeric" maxlength="6">
+      </div>
+
+      <div class="form-group">
+        <label for="cfg-animales">Lista de animales (IDs separados por coma)</label>
+        <textarea id="cfg-animales" rows="3" placeholder="A001,A002,A003,..."></textarea>
+        <small>Se cargan automáticamente al sincronizar. Editar solo si es necesario.</small>
+      </div>
+
+      <button class="btn btn--submit" onclick="App.saveConfig()">💾 Guardar Configuración</button>
+
+      <hr>
+      <div class="config-info">
+        <p><strong>Versión:</strong> 1.0.0</p>
+        <p><strong>Registros locales:</strong> <span id="cfg-total-records">0</span></p>
+        <p><strong>Pendientes de sync:</strong> <span id="cfg-pending-records">0</span></p>
+      </div>
+      <button class="btn btn--danger" onclick="App.clearAllData()">🗑️ Borrar todos los datos locales</button>
+    </div>
+  </div>
+
+  <!-- ========== MODAL EDITAR REGISTRO ========== -->
+  <div id="modal-edit" class="modal" style="display:none">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-title">Editar registro</h2>
+        <button class="modal-close" onclick="App.closeModal()">✕</button>
+      </div>
+      <div id="modal-body" class="form"></div>
+      <div class="modal-footer">
+        <button class="btn btn--danger" style="flex:1" onclick="App.confirmDelete()">🗑️ Eliminar</button>
+        <button class="btn btn--submit" style="flex:2" onclick="App.saveEdit()">💾 Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== TOAST NOTIFICACIÓN ========== -->
+  <div id="toast" class="toast"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 // Service Worker — El Silencio PWA
-const CACHE_NAME = 'elsilencio-v5';
+const CACHE_NAME = 'elsilencio-v6';
 const ASSETS = [
   './',
   './index.html',

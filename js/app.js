@@ -124,8 +124,8 @@ const App = (() => {
   function getPendingRecords() {
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE, 'readonly');
-      const req = tx.objectStore(STORE).index('synced').getAll(false);
-      req.onsuccess = () => resolve(req.result);
+      const req = tx.objectStore(STORE).getAll();
+      req.onsuccess = () => resolve(req.result.filter(r => r.synced === false));
       req.onerror = (e) => reject(e);
     });
   }

@@ -51,19 +51,88 @@ const App = (() => {
     if (!cfg.scriptUrl) { cfg.scriptUrl = DEFAULT_SCRIPT_URL; changed = true; }
     if (!cfg.animales || cfg.animales.length === 0) { cfg.animales = DEFAULT_ANIMALS; changed = true; }
     if (changed) localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+
+    // Mostrar pantalla de PIN si hay PIN configurado
+    if (cfg.pin) {
+      showPinScreen();
+      return; // No inicializar hasta que desbloquee
+    }
+
+    finishInit();
+  }
+
+  function finishInit() {
     loadConfig();
     setDefaultDates();
     updateSyncBadge();
+    updateConnectionStatus();
     registerSW();
     setupAnimalAutoFill();
 
     // Restaurar backup si IndexedDB está vacío
-    await restoreFromBackup();
+    restoreFromBackup();
 
+    // Sync automático cuando vuelve la conexión
     window.addEventListener('online', () => {
+      updateConnectionStatus();
       toast('Conexión detectada. Sincronizando...', 'info');
       syncNow();
     });
+    window.addEventListener('offline', () => {
+      updateConnectionStatus();
+      toast('Sin conexión. Los datos se guardan localmente.', 'info');
+    });
+
+    // Sync cuando la app vuelve al primer plano (ej: vaquero abre la app de nuevo)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        updateConnectionStatus();
+        getPendingRecords().then(p => { if (p.length > 0) syncNow(); });
+      }
+    });
+
+    // Sync periódico cada 2 min mientras la app esté abierta
+    startPeriodicSync();
+
+    // Intentar sync inicial
+    tryAutoSync();
+  }
+
+  // ==================== PIN LOCK ====================
+  function showPinScreen() {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-pin').classList.add('active');
+    const inp = document.getElementById('pin-input');
+    inp.value = '';
+    inp.focus();
+  }
+
+  function checkPin() {
+    const entered = document.getElementById('pin-input').value.trim();
+    const cfg = getConfig();
+    if (entered === cfg.pin) {
+      document.getElementById('screen-pin').classList.remove('active');
+      document.getElementById('pin-error').style.display = 'none';
+      document.getElementById('screen-home').classList.add('active');
+      finishInit();
+    } else {
+      document.getElementById('pin-error').style.display = 'block';
+      document.getElementById('pin-input').value = '';
+      document.getElementById('pin-input').focus();
+    }
+  }
+
+  // ==================== CONNECTION STATUS ====================
+  function updateConnectionStatus() {
+    const dot = document.getElementById('connection-dot');
+    if (!dot) return;
+    if (navigator.onLine) {
+      dot.className = 'connection-dot online';
+      dot.title = 'Con internet';
+    } else {
+      dot.className = 'connection-dot offline';
+      dot.title = 'Sin internet';
+    }
   }
 
   // ==================== INDEXEDDB ====================
@@ -305,7 +374,7 @@ const App = (() => {
     };
 
     addRecord(record).then(() => {
-      toast('Pesaje guardado', 'success');
+      showBigConfirm('PESAJE GUARDADO');
       e.target.reset();
       setDefaultDates();
       updateSyncBadge();
@@ -346,7 +415,7 @@ const App = (() => {
     };
 
     await addRecord(record);
-    toast('Ingreso registrado', 'success');
+    showBigConfirm('INGRESO REGISTRADO');
     e.target.reset();
     setDefaultDates();
     document.getElementById(prefix + '-info').style.display = 'none';
@@ -475,6 +544,10 @@ const App = (() => {
 
   async function confirmDelete() {
     if (!editingRecord) return;
+    if (editingRecord.synced) {
+      toast('Este registro ya fue sincronizado. No se puede eliminar.', 'error');
+      return;
+    }
     if (confirm('¿Eliminar este registro? Esta acción no se puede deshacer.')) {
       const id = editingRecord.id;
       closeModal();
@@ -486,57 +559,122 @@ const App = (() => {
   }
 
   // ==================== SYNC ====================
+  let syncInProgress = false;
+  let syncRetryTimer = null;
+
   async function syncNow() {
+    if (syncInProgress) return; // Evitar syncs simultáneos
     const config = getConfig();
     if (!config.scriptUrl) { toast('Configure la URL del Apps Script primero', 'error'); goTo('config'); return; }
     if (!navigator.onLine) { toast('Sin conexión. Se sincronizará cuando haya internet.', 'info'); return; }
 
+    syncInProgress = true;
     const btn = document.getElementById('btn-sync');
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Sincronizando...'; }
 
     try {
       const pending = await getPendingRecords();
-      if (pending.length === 0) { toast('Todo sincronizado', 'success'); return; }
-
-      let synced = 0;
-      for (const record of pending) {
-        try {
-          const ok = await sendToSheet(config.scriptUrl, record);
-          if (ok) {
-            await markSynced(record.id);
-            synced++;
-          }
-        } catch (err) { console.error('Sync error:', record.id, err); }
+      if (pending.length === 0) {
+        toast('Todo sincronizado', 'success');
+        syncInProgress = false;
+        if (btn) { btn.disabled = false; btn.textContent = '🔄 Sincronizar ahora'; }
+        return;
       }
 
-      toast(`${synced} de ${pending.length} registros sincronizados`, synced > 0 ? 'success' : 'error');
+      let synced = 0;
+      let failed = 0;
+      for (const record of pending) {
+        try {
+          const result = await sendToSheet(config.scriptUrl, record);
+          if (result.ok) {
+            await markSynced(record.id);
+            synced++;
+          } else {
+            failed++;
+            console.error('Sync rejected by Sheet:', record.id, result.error);
+          }
+        } catch (err) {
+          failed++;
+          console.error('Sync error:', record.id, err);
+        }
+      }
+
+      if (synced > 0 && failed === 0) {
+        toast(`${synced} registro${synced > 1 ? 's' : ''} sincronizado${synced > 1 ? 's' : ''}`, 'success');
+      } else if (synced > 0 && failed > 0) {
+        toast(`${synced} sincronizado${synced > 1 ? 's' : ''}, ${failed} pendiente${failed > 1 ? 's' : ''} (se reintentará)`, 'info');
+        scheduleRetry();
+      } else {
+        toast(`No se pudo sincronizar. Se reintentará automáticamente.`, 'error');
+        scheduleRetry();
+      }
+
       loadAnimalList(config.scriptUrl);
     } catch (err) {
-      toast('Error de sincronización', 'error');
+      toast('Error de sincronización. Se reintentará.', 'error');
+      scheduleRetry();
     } finally {
+      syncInProgress = false;
       if (btn) { btn.disabled = false; btn.textContent = '🔄 Sincronizar ahora'; }
       updateSyncBadge();
     }
   }
 
-  // Enviar datos al Sheet
+  // Verificar respuesta real del Apps Script (no solo HTTP 200)
   async function sendToSheet(scriptUrl, record) {
     const payload = encodeURIComponent(JSON.stringify(record));
     const url = scriptUrl + '?action=save&data=' + payload;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
     try {
-      // Intentar fetch normal (sigue redirects de Google)
-      const resp = await fetch(url, { redirect: 'follow' });
-      return resp.ok;
-    } catch (e1) {
+      const resp = await fetch(url, { redirect: 'follow', signal: controller.signal });
+      clearTimeout(timeout);
+      if (!resp.ok) return { ok: false, error: 'HTTP ' + resp.status };
+      // Leer la respuesta real del Apps Script
+      const text = await resp.text();
       try {
-        // Fallback: no-cors (no podemos leer respuesta pero la petición se hace)
-        await fetch(url, { mode: 'no-cors', redirect: 'follow' });
-        return true;
-      } catch (e2) {
-        console.error('sendToSheet failed:', e2);
-        return false;
+        const data = JSON.parse(text);
+        if (data.status === 'ok' && data.row) {
+          return { ok: true, row: data.row };
+        }
+        return { ok: false, error: data.message || 'Respuesta inesperada del servidor' };
+      } catch (parseErr) {
+        // Si Google devolvió HTML o respuesta no-JSON pero HTTP 200,
+        // no podemos confirmar que escribió — dejarlo como pendiente
+        console.error('Respuesta no-JSON del servidor:', text.substring(0, 200));
+        return { ok: false, error: 'Respuesta no válida del servidor' };
       }
+    } catch (e) {
+      clearTimeout(timeout);
+      console.error('sendToSheet failed:', e);
+      return { ok: false, error: e.name === 'AbortError' ? 'Tiempo agotado (señal débil)' : e.message };
     }
+  }
+
+  // Reintentar sync cada 30 segundos si hay pendientes
+  function scheduleRetry() {
+    if (syncRetryTimer) return; // Ya hay un reintento programado
+    syncRetryTimer = setTimeout(async () => {
+      syncRetryTimer = null;
+      if (!navigator.onLine) { scheduleRetry(); return; }
+      const pending = await getPendingRecords();
+      if (pending.length > 0) {
+        console.log('Reintentando sync:', pending.length, 'pendientes');
+        syncNow();
+      }
+    }, 30000);
+  }
+
+  // Sync periódico: cada 2 minutos verifica si hay pendientes
+  function startPeriodicSync() {
+    setInterval(async () => {
+      if (!navigator.onLine || syncInProgress) return;
+      const pending = await getPendingRecords();
+      if (pending.length > 0) {
+        console.log('Sync periódico:', pending.length, 'pendientes');
+        syncNow();
+      }
+    }, 120000);
   }
 
   function tryAutoSync() {
@@ -645,7 +783,7 @@ const App = (() => {
           <div class="record-card__body">${body}</div>
           <div class="record-card__actions">
             <button class="record-card__btn record-card__btn--edit" onclick="App.openEdit(${r.id})">✏️ Editar</button>
-            <button class="record-card__btn record-card__btn--delete" onclick="App.quickDelete(${r.id})">🗑️ Eliminar</button>
+            ${r.synced ? '' : '<button class="record-card__btn record-card__btn--delete" onclick="App.quickDelete(' + r.id + ')">🗑️ Eliminar</button>'}
           </div>
         </div>`;
     }).join('');
@@ -667,7 +805,13 @@ const App = (() => {
   }
 
   async function quickDelete(id) {
-    if (confirm('¿Eliminar este registro?')) {
+    const record = await getRecord(id);
+    if (!record) return;
+    if (record.synced) {
+      toast('Este registro ya fue sincronizado. No se puede eliminar.', 'error');
+      return;
+    }
+    if (confirm('¿Eliminar este registro? Esta acción no se puede deshacer.')) {
       await deleteRecord(id);
       toast('Registro eliminado', 'info');
       renderHistory();
@@ -709,12 +853,22 @@ const App = (() => {
   }
 
   async function clearAllData() {
-    if (confirm('¿Borrar TODOS los registros locales? No se puede deshacer.')) {
-      if (confirm('¿Seguro? Se perderán los datos no sincronizados.')) {
-        await clearAll();
-        toast('Datos borrados', 'info');
-        updateSyncBadge();
+    const cfg = getConfig();
+    if (cfg.pin) {
+      const pin = prompt('Ingrese el PIN para borrar datos:');
+      if (pin !== cfg.pin) {
+        toast('PIN incorrecto. Operación cancelada.', 'error');
+        return;
       }
+    }
+    const pending = await getPendingRecords();
+    if (pending.length > 0) {
+      if (!confirm('HAY ' + pending.length + ' REGISTROS SIN SINCRONIZAR. Si borra ahora, se PERDERÁN PARA SIEMPRE. ¿Continuar?')) return;
+    }
+    if (confirm('¿Borrar TODOS los registros locales? No se puede deshacer.')) {
+      await clearAll();
+      toast('Datos borrados', 'info');
+      updateSyncBadge();
     }
   }
 
@@ -724,6 +878,16 @@ const App = (() => {
     el.textContent = msg;
     el.className = 'toast ' + type + ' show';
     setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  // Confirmación grande en pantalla completa para guardar
+  function showBigConfirm(msg) {
+    const overlay = document.createElement('div');
+    overlay.className = 'big-confirm';
+    overlay.innerHTML = '<div class="big-confirm__content"><span class="big-confirm__check">&#10003;</span><span class="big-confirm__msg">' + msg + '</span></div>';
+    document.body.appendChild(overlay);
+    setTimeout(() => { overlay.classList.add('fade-out'); }, 1500);
+    setTimeout(() => { overlay.remove(); }, 2000);
   }
 
   // ==================== SERVICE WORKER ====================
@@ -741,6 +905,7 @@ const App = (() => {
   return {
     goTo, savePesaje, savePradera, syncNow, showPending,
     filterHistory, quickDelete, saveConfig, clearAllData,
-    onCuadraChange, openEdit, closeModal, saveEdit, confirmDelete
+    onCuadraChange, openEdit, closeModal, saveEdit, confirmDelete,
+    checkPin
   };
 })();

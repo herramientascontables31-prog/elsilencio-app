@@ -1,12 +1,14 @@
 // Service Worker — El Silencio PWA
-const CACHE_NAME = 'elsilencio-v11';
+const CACHE_NAME = 'elsilencio-v12';
 const ASSETS = [
   './',
   './index.html',
   './css/style.css',
   './js/app.js',
   './manifest.json',
-  './icons/icon.svg'
+  './icons/icon.svg',
+  './icons/icon-192.png',
+  './icons/icon-512.png'
 ];
 
 // Install: cache all assets

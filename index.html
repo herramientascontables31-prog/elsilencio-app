@@ -14,9 +14,23 @@
 </head>
 <body>
 
+  <!-- ========== PANTALLA: PIN ========== -->
+  <div id="screen-pin" class="screen">
+    <div class="pin-screen">
+      <div class="pin-screen__icon">🔒</div>
+      <h2>Ganadería El Silencio</h2>
+      <p>Ingrese el PIN para continuar</p>
+      <input type="number" id="pin-input" class="pin-input" placeholder="PIN" inputmode="numeric" maxlength="6"
+             onkeydown="if(event.key==='Enter')App.checkPin()">
+      <button class="btn btn--submit" onclick="App.checkPin()" style="max-width:280px;margin:0.5rem auto 0">Desbloquear</button>
+      <p id="pin-error" class="pin-error" style="display:none">PIN incorrecto</p>
+    </div>
+  </div>
+
   <!-- ========== PANTALLA: HOME ========== -->
   <div id="screen-home" class="screen active">
     <header class="header">
+      <div id="connection-dot" class="connection-dot offline" title="Sin internet"></div>
       <h1>🐄 El Silencio</h1>
       <div id="sync-badge" class="sync-badge" onclick="App.showPending()">
         <span id="sync-icon">✓</span>
@@ -85,7 +99,7 @@
           <option value="A014">A014</option>
           <option value="A015">A015</option>
         </select>
-        <input type="text" id="p-id-manual" placeholder="O escriba el ID manualmente" class="input-alt">
+        <input type="text" id="p-id-manual" style="display:none">
       </div>
 
       <div class="form-group">

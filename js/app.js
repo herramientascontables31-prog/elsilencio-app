@@ -401,6 +401,8 @@ const App = (() => {
 
     await closePreviousEntry(tipo, cuadra, fechaIngreso);
 
+    const fechaSalida = document.getElementById(prefix + '-fecha-out').value || null;
+
     const record = {
       type: 'praderas-' + tipo,
       zona: cuadraData.zona || 'Zona 1',
@@ -410,7 +412,7 @@ const App = (() => {
       aforo: parseFloat(document.getElementById(prefix + '-aforo').value) || null,
       cargaReal: parseInt(document.getElementById(prefix + '-carga-real').value),
       fechaIngreso: fechaIngreso,
-      fechaSalida: null,
+      fechaSalida: fechaSalida,
       observaciones: document.getElementById(prefix + '-obs').value.trim()
     };
 

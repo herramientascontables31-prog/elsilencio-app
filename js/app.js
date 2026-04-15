@@ -328,6 +328,8 @@ const App = (() => {
   }
 
   // ==================== NAVIGATION ====================
+  let currentScreen = 'home';
+
   function goTo(screenId) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     const target = document.getElementById('screen-' + screenId);
@@ -335,7 +337,29 @@ const App = (() => {
     if (screenId === 'historial') renderHistory();
     if (screenId === 'config') loadConfigUI();
     if (screenId === 'praderas-caballos' || screenId === 'praderas-ganado') setDefaultDates();
+    // Guardar en historial del navegador para que el botón atrás funcione
+    if (screenId !== currentScreen) {
+      if (currentScreen === 'home' && screenId !== 'pin') {
+        history.pushState({ screen: screenId }, '', '');
+      }
+      currentScreen = screenId;
+    }
   }
+
+  // Botón atrás del celular → volver al home en vez de salirse de la app
+  window.addEventListener('popstate', (e) => {
+    // Si hay modal abierto, cerrarlo
+    const modal = document.getElementById('modal-edit');
+    if (modal && modal.style.display === 'flex') {
+      closeModal();
+      history.pushState({ screen: currentScreen }, '', '');
+      return;
+    }
+    // Si no está en home, volver al home
+    if (currentScreen !== 'home') {
+      goTo('home');
+    }
+  });
 
   // ==================== DEFAULT DATES ====================
   function setDefaultDates() {

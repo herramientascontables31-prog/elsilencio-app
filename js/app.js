@@ -379,6 +379,11 @@ const App = (() => {
     return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
   }
 
+  function setNow(inputId) {
+    const el = document.getElementById(inputId);
+    if (el) el.value = getNowLocalISO();
+  }
+
   // ==================== SAVE: PESAJE ====================
   function savePesaje(e) {
     e.preventDefault();
@@ -932,6 +937,6 @@ const App = (() => {
     goTo, savePesaje, savePradera, syncNow, showPending,
     filterHistory, quickDelete, saveConfig, clearAllData,
     onCuadraChange, openEdit, closeModal, saveEdit, confirmDelete,
-    checkPin
+    checkPin, setNow
   };
 })();

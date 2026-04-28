@@ -21,24 +21,33 @@ const App = (() => {
     'A014':{peso:238,fecha:'2025-07-01'},'A015':{peso:250,fecha:'2025-07-01'}
   };
 
-  const CUADRAS_CABALLOS = {
-    1:{area:2044,zona:'Zona 1',pasto:'70% pasto amargo y cortadera, 30% grama'},
-    2:{area:1323,zona:'Zona 1',pasto:'40% cortadera, 60% pasto'},
-    3:{area:1078,zona:'Zona 1',pasto:'10% pasto amargo, 100% grama'},
-    4:{area:1325,zona:'Zona 1',pasto:'40% estrella, 60% grama'},
-    5:{area:1099,zona:'Zona 1',pasto:'100% grama'},
-    6:{area:1637,zona:'Zona 1',pasto:'100% grama'},
-    7:{area:2555,zona:'Zona 1',pasto:'100% grama'},
-    8:{area:2051,zona:'Zona 1',pasto:''},9:{area:2086,zona:'Zona 1',pasto:''},
-    10:{area:2535,zona:'Zona 1',pasto:''},11:{area:2307,zona:'Zona 1',pasto:''},
-    12:{area:2385,zona:'Zona 1',pasto:''},13:{area:1876,zona:'Zona 1',pasto:''},
-    14:{area:1216,zona:'Zona 1',pasto:''},15:{area:1062,zona:'Zona 1',pasto:''}
-  };
+  // Default offline para el primer arranque. Se reemplazan al primer sync con Sheet.
+  const DEFAULT_CUADRAS_CABALLOS = [
+    {cuadra:1,area:2044,zona:'Zona 1',pasto:'70% pasto amargo y cortadera, 30% grama'},
+    {cuadra:2,area:1323,zona:'Zona 1',pasto:'40% cortadera, 60% pasto'},
+    {cuadra:3,area:1078,zona:'Zona 1',pasto:'10% pasto amargo, 100% grama'},
+    {cuadra:4,area:1325,zona:'Zona 1',pasto:'40% estrella, 60% grama'},
+    {cuadra:5,area:1099,zona:'Zona 1',pasto:'100% grama'},
+    {cuadra:6,area:1637,zona:'Zona 1',pasto:'100% grama'},
+    {cuadra:7,area:2555,zona:'Zona 1',pasto:'100% grama'},
+    {cuadra:8,area:2051,zona:'Zona 1',pasto:''},
+    {cuadra:9,area:2086,zona:'Zona 1',pasto:''},
+    {cuadra:10,area:2535,zona:'Zona 1',pasto:''},
+    {cuadra:11,area:2307,zona:'Zona 1',pasto:''},
+    {cuadra:12,area:2385,zona:'Zona 1',pasto:''},
+    {cuadra:13,area:1876,zona:'Zona 1',pasto:''},
+    {cuadra:14,area:1216,zona:'Zona 1',pasto:''},
+    {cuadra:15,area:1062,zona:'Zona 1',pasto:''}
+  ];
+  const DEFAULT_CUADRAS_GANADO = [
+    {cuadra:11,area:0.4524,zona:'Zona 1',pasto:'20% Cortadera y escoba, 80% Climacuna'},
+    {cuadra:12,area:0.4233,zona:'Zona 1',pasto:'30% cortadera, 70% Climacuna y Grama'}
+  ];
 
-  const CUADRAS_GANADO = {
-    11:{area:0.4524,zona:'Zona 1',pasto:'20% Cortadera y escoba, 80% Climacuna'},
-    12:{area:0.4233,zona:'Zona 1',pasto:'30% cortadera, 70% Climacuna y Grama'}
-  };
+  // Estado mutable: cuadras vivas (cargadas desde Sheet o desde cache).
+  // Indexado por número de cuadra para lookup rápido en savePradera/onCuadraChange.
+  let CUADRAS_CABALLOS = {};
+  let CUADRAS_GANADO = {};
 
   let db = null;
   let editingRecord = null; // record being edited
@@ -50,7 +59,11 @@ const App = (() => {
     let changed = false;
     if (!cfg.scriptUrl) { cfg.scriptUrl = DEFAULT_SCRIPT_URL; changed = true; }
     if (!cfg.animales || cfg.animales.length === 0) { cfg.animales = DEFAULT_ANIMALS; changed = true; }
+    if (!cfg.cuadrasCaballos || cfg.cuadrasCaballos.length === 0) { cfg.cuadrasCaballos = DEFAULT_CUADRAS_CABALLOS; changed = true; }
+    if (!cfg.cuadrasGanado || cfg.cuadrasGanado.length === 0) { cfg.cuadrasGanado = DEFAULT_CUADRAS_GANADO; changed = true; }
     if (changed) localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+
+    applyCuadras(cfg.cuadrasCaballos, cfg.cuadrasGanado);
 
     // Mostrar pantalla de PIN si hay PIN configurado
     if (cfg.pin) {
@@ -96,6 +109,12 @@ const App = (() => {
 
     // Intentar sync inicial
     tryAutoSync();
+
+    // Refrescar cuadras desde Sheet aunque no haya pendientes
+    if (navigator.onLine) {
+      const cfg = getConfig();
+      if (cfg.scriptUrl) loadCuadrasList(cfg.scriptUrl);
+    }
   }
 
   // ==================== PIN LOCK ====================
@@ -641,6 +660,7 @@ const App = (() => {
       }
 
       loadAnimalList(config.scriptUrl);
+      loadCuadrasList(config.scriptUrl);
     } catch (err) {
       toast('Error de sincronización. Se reintentará.', 'error');
       scheduleRetry();
@@ -734,6 +754,47 @@ const App = (() => {
     animals.forEach(id => {
       const opt = document.createElement('option');
       opt.value = id; opt.textContent = id;
+      select.appendChild(opt);
+    });
+  }
+
+  // ==================== CUADRAS (DESDE SHEET) ====================
+  function applyCuadras(caballosList, ganadoList) {
+    CUADRAS_CABALLOS = {};
+    (caballosList || []).forEach(c => { CUADRAS_CABALLOS[c.cuadra] = c; });
+    CUADRAS_GANADO = {};
+    (ganadoList || []).forEach(c => { CUADRAS_GANADO[c.cuadra] = c; });
+    populateCuadrasSelect('caballos', caballosList || []);
+    populateCuadrasSelect('ganado', ganadoList || []);
+  }
+
+  async function loadCuadrasList(scriptUrl) {
+    try {
+      const resp = await fetch(scriptUrl + '?action=getCuadras');
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const cab = Array.isArray(data.caballos) ? data.caballos : null;
+      const gan = Array.isArray(data.ganado) ? data.ganado : null;
+      if (!cab && !gan) return;
+      const config = getConfig();
+      if (cab && cab.length > 0) config.cuadrasCaballos = cab;
+      if (gan && gan.length > 0) config.cuadrasGanado = gan;
+      localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+      applyCuadras(config.cuadrasCaballos, config.cuadrasGanado);
+    } catch (e) { /* offline → usa cache local */ }
+  }
+
+  function populateCuadrasSelect(tipo, list) {
+    const id = tipo === 'caballos' ? 'pc-cuadra' : 'pg-cuadra';
+    const select = document.getElementById(id);
+    if (!select) return;
+    select.innerHTML = '<option value="">-- Seleccionar --</option>';
+    list.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.cuadra;
+      const unit = tipo === 'caballos' ? ' m²' : ' Ha';
+      const areaText = c.area ? ' — ' + c.area + unit : '';
+      opt.textContent = 'Cuadra ' + c.cuadra + areaText;
       select.appendChild(opt);
     });
   }

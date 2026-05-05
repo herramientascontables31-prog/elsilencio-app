@@ -152,9 +152,10 @@
     <form id="form-praderas-caballos" class="form" onsubmit="return App.savePradera(event, 'caballos')">
       <div class="form-group">
         <label for="pc-cuadra">Cuadra *</label>
-        <select id="pc-cuadra" required onchange="App.onCuadraChange('caballos')">
+        <select id="pc-cuadra" onchange="App.onCuadraChange('caballos')">
           <option value="">-- Seleccionar --</option>
         </select>
+        <input type="text" id="pc-cuadra-manual" placeholder="O escriba # de cuadra nueva (ej: 14)" class="input-alt" inputmode="numeric">
       </div>
 
       <div class="info-box" id="pc-info" style="display:none">
@@ -211,10 +212,10 @@
     <form id="form-praderas-ganado" class="form" onsubmit="return App.savePradera(event, 'ganado')">
       <div class="form-group">
         <label for="pg-cuadra">Cuadra *</label>
-        <select id="pg-cuadra" required onchange="App.onCuadraChange('ganado')">
+        <select id="pg-cuadra" onchange="App.onCuadraChange('ganado')">
           <option value="">-- Seleccionar --</option>
         </select>
-        <input type="number" id="pg-cuadra-manual" placeholder="O escriba # de cuadra nueva" class="input-alt" inputmode="numeric">
+        <input type="text" id="pg-cuadra-manual" placeholder="O escriba # de cuadra nueva (ej: 51)" class="input-alt" inputmode="numeric">
       </div>
 
       <div class="info-box" id="pg-info" style="display:none">

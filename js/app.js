@@ -14,26 +14,73 @@ const App = (() => {
   const DEFAULT_ANIMALS = ['A001','A002','A003','A004','A006','A007','A008','A010','A011','A012','A014','A015'];
 
   // Default offline para el primer arranque. Se reemplazan al primer sync con Sheet.
+  // ID = número + sufijo C (caballos) o B (bovinos). Áreas en m².
   const DEFAULT_CUADRAS_CABALLOS = [
-    {cuadra:1,area:2044,zona:'Zona 1',pasto:'70% pasto amargo y cortadera, 30% grama'},
-    {cuadra:2,area:1323,zona:'Zona 1',pasto:'40% cortadera, 60% pasto'},
-    {cuadra:3,area:1078,zona:'Zona 1',pasto:'10% pasto amargo, 100% grama'},
-    {cuadra:4,area:1325,zona:'Zona 1',pasto:'40% estrella, 60% grama'},
-    {cuadra:5,area:1099,zona:'Zona 1',pasto:'100% grama'},
-    {cuadra:6,area:1637,zona:'Zona 1',pasto:'100% grama'},
-    {cuadra:7,area:2555,zona:'Zona 1',pasto:'100% grama'},
-    {cuadra:8,area:2051,zona:'Zona 1',pasto:''},
-    {cuadra:9,area:2086,zona:'Zona 1',pasto:''},
-    {cuadra:10,area:2535,zona:'Zona 1',pasto:''},
-    {cuadra:11,area:2307,zona:'Zona 1',pasto:''},
-    {cuadra:12,area:2385,zona:'Zona 1',pasto:''},
-    {cuadra:13,area:1876,zona:'Zona 1',pasto:''},
-    {cuadra:14,area:1216,zona:'Zona 1',pasto:''},
-    {cuadra:15,area:1062,zona:'Zona 1',pasto:''}
+    {cuadra:'1C',area:2044,zona:'Zona 1',pasto:'70% pasto amargo y cortadera, 30% grama'},
+    {cuadra:'2C',area:1323,zona:'Zona 1',pasto:'40% cortadera, 60% pasto'},
+    {cuadra:'3C',area:1078,zona:'Zona 1',pasto:'10% pasto amargo, 100% grama'},
+    {cuadra:'4C',area:1325,zona:'Zona 1',pasto:'40% estrella, 60% grama'},
+    {cuadra:'5C',area:1099,zona:'Zona 1',pasto:'100% grama'},
+    {cuadra:'6C',area:1637,zona:'Zona 1',pasto:'100% grama'},
+    {cuadra:'7C',area:2555,zona:'Zona 1',pasto:'100% grama'},
+    {cuadra:'8C',area:2051,zona:'Zona 1',pasto:''},
+    {cuadra:'9C',area:2086,zona:'Zona 1',pasto:''},
+    {cuadra:'10C',area:2535,zona:'Zona 1',pasto:''},
+    {cuadra:'11C',area:2307,zona:'Zona 1',pasto:''},
+    {cuadra:'12C',area:2385,zona:'Zona 1',pasto:''},
+    {cuadra:'13C',area:1876,zona:'Zona 1',pasto:''}
   ];
   const DEFAULT_CUADRAS_GANADO = [
-    {cuadra:11,area:0.4524,zona:'Zona 1',pasto:'20% Cortadera y escoba, 80% Climacuna'},
-    {cuadra:12,area:0.4233,zona:'Zona 1',pasto:'30% cortadera, 70% Climacuna y Grama'}
+    {cuadra:'1B',area:3145,zona:'Zona 1',pasto:''},
+    {cuadra:'2B',area:2700,zona:'Zona 1',pasto:''},
+    {cuadra:'3B',area:3435,zona:'Zona 1',pasto:''},
+    {cuadra:'4B',area:4708,zona:'Zona 1',pasto:''},
+    {cuadra:'5B',area:2986,zona:'Zona 1',pasto:''},
+    {cuadra:'6B',area:3807,zona:'Zona 1',pasto:''},
+    {cuadra:'7B',area:3479,zona:'Zona 1',pasto:''},
+    {cuadra:'8B',area:4036,zona:'Zona 1',pasto:''},
+    {cuadra:'9B',area:4711,zona:'Zona 1',pasto:''},
+    {cuadra:'10B',area:4029,zona:'Zona 1',pasto:''},
+    {cuadra:'11B',area:4524,zona:'Zona 1',pasto:'20% Cortadera y escoba, 80% Climacuna'},
+    {cuadra:'12B',area:4233,zona:'Zona 1',pasto:'30% cortadera, 70% Climacuna y Grama'},
+    {cuadra:'13B',area:3516,zona:'Zona 1',pasto:''},
+    {cuadra:'14B',area:2658,zona:'Zona 1',pasto:''},
+    {cuadra:'15B',area:3635,zona:'Zona 1',pasto:''},
+    {cuadra:'16B',area:4110,zona:'Zona 1',pasto:''},
+    {cuadra:'17B',area:2968,zona:'Zona 1',pasto:''},
+    {cuadra:'18B',area:3383,zona:'Zona 1',pasto:''},
+    {cuadra:'19B',area:3711,zona:'Zona 1',pasto:''},
+    {cuadra:'20B',area:2811,zona:'Zona 1',pasto:''},
+    {cuadra:'21B',area:3491,zona:'Zona 1',pasto:''},
+    {cuadra:'22B',area:3664,zona:'Zona 1',pasto:''},
+    {cuadra:'23B',area:4360,zona:'Zona 1',pasto:''},
+    {cuadra:'24B',area:3572,zona:'Zona 1',pasto:''},
+    {cuadra:'25B',area:4874,zona:'Zona 1',pasto:''},
+    {cuadra:'26B',area:4186,zona:'Zona 1',pasto:''},
+    {cuadra:'27B',area:2714,zona:'Zona 1',pasto:''},
+    {cuadra:'28B',area:4112,zona:'Zona 1',pasto:''},
+    {cuadra:'29B',area:2886,zona:'Zona 1',pasto:''},
+    {cuadra:'30B',area:3547,zona:'Zona 1',pasto:''},
+    {cuadra:'31B',area:2518,zona:'Zona 1',pasto:''},
+    {cuadra:'32B',area:3980,zona:'Zona 1',pasto:''},
+    {cuadra:'33B',area:4343,zona:'Zona 1',pasto:''},
+    {cuadra:'34B',area:3458,zona:'Zona 1',pasto:''},
+    {cuadra:'35B',area:3712,zona:'Zona 1',pasto:''},
+    {cuadra:'36B',area:4054,zona:'Zona 1',pasto:''},
+    {cuadra:'37B',area:3069,zona:'Zona 1',pasto:''},
+    {cuadra:'38B',area:4568,zona:'Zona 1',pasto:''},
+    {cuadra:'39B',area:2283,zona:'Zona 1',pasto:''},
+    {cuadra:'40B',area:4315,zona:'Zona 1',pasto:''},
+    {cuadra:'41B',area:5523,zona:'Zona 1',pasto:''},
+    {cuadra:'42B',area:4293,zona:'Zona 1',pasto:''},
+    {cuadra:'43B',area:2828,zona:'Zona 1',pasto:''},
+    {cuadra:'44B',area:4035,zona:'Zona 1',pasto:''},
+    {cuadra:'45B',area:4140,zona:'Zona 1',pasto:''},
+    {cuadra:'46B',area:2836,zona:'Zona 1',pasto:''},
+    {cuadra:'47B',area:3932,zona:'Zona 1',pasto:''},
+    {cuadra:'48B',area:5151,zona:'Zona 1',pasto:''},
+    {cuadra:'49B',area:3902,zona:'Zona 1',pasto:''},
+    {cuadra:'50B',area:4024,zona:'Zona 1',pasto:''}
   ];
 
   // Estado mutable: cuadras vivas (cargadas desde Sheet o desde cache).
@@ -314,9 +361,24 @@ const App = (() => {
   }
 
   // ==================== AUTO-FILL PRADERA ====================
+  function normalizeCuadraId(raw, tipo) {
+    if (raw === null || raw === undefined) return '';
+    const s = String(raw).trim().toUpperCase();
+    if (!s) return '';
+    if (/^\d+[CB]$/.test(s)) return s;
+    if (/^\d+$/.test(s)) return s + (tipo === 'caballos' ? 'C' : 'B');
+    return s;
+  }
+
+  function cuadraMatches(rec, cuadraId, tipo) {
+    if (rec.type !== 'praderas-' + tipo) return false;
+    const recId = normalizeCuadraId(rec.cuadra, tipo);
+    return recId === String(cuadraId).trim().toUpperCase();
+  }
+
   async function onCuadraChange(tipo) {
     const prefix = tipo === 'caballos' ? 'pc' : 'pg';
-    const cuadra = parseInt(document.getElementById(prefix + '-cuadra').value);
+    const cuadra = document.getElementById(prefix + '-cuadra').value;
     if (!cuadra) return;
 
     const infoBox = document.getElementById(prefix + '-info');
@@ -342,10 +404,10 @@ const App = (() => {
     }
   }
 
-  async function getLastPraderaEntry(tipo, cuadra) {
+  async function getLastPraderaEntry(tipo, cuadraId) {
     const records = await getAllRecords();
     const entries = records
-      .filter(r => r.type === 'praderas-' + tipo && r.cuadra === cuadra)
+      .filter(r => cuadraMatches(r, cuadraId, tipo))
       .sort((a, b) => new Date(b.fechaIngreso) - new Date(a.fechaIngreso));
     return entries.length > 0 ? entries[0] : null;
   }
@@ -444,8 +506,8 @@ const App = (() => {
     let cuadra;
     const selectEl = document.getElementById(prefix + '-cuadra');
     const manualEl = document.getElementById(prefix + '-cuadra-manual');
-    if (selectEl.value) cuadra = parseInt(selectEl.value);
-    else if (manualEl && manualEl.value) cuadra = parseInt(manualEl.value);
+    if (selectEl.value) cuadra = normalizeCuadraId(selectEl.value, tipo);
+    else if (manualEl && manualEl.value) cuadra = normalizeCuadraId(manualEl.value, tipo);
     else { toast('Seleccione una cuadra', 'error'); return false; }
 
     const cuadraData = cuadras[cuadra] || {};
@@ -478,10 +540,10 @@ const App = (() => {
     return false;
   }
 
-  async function closePreviousEntry(tipo, cuadra, newFechaIngreso) {
+  async function closePreviousEntry(tipo, cuadraId, newFechaIngreso) {
     const records = await getAllRecords();
     const prev = records
-      .filter(r => r.type === 'praderas-' + tipo && r.cuadra === cuadra && !r.fechaSalida)
+      .filter(r => cuadraMatches(r, cuadraId, tipo) && !r.fechaSalida)
       .sort((a, b) => new Date(b.fechaIngreso) - new Date(a.fechaIngreso));
     if (prev.length > 0) {
       prev[0].fechaSalida = newFechaIngreso;
@@ -528,12 +590,12 @@ const App = (() => {
           <textarea id="edit-observaciones" rows="2">${record.observaciones || ''}</textarea>
         </div>`;
     } else {
-      const tipo = record.type === 'praderas-caballos' ? 'Caballos' : 'Ganado';
-      title.textContent = 'Editar Pradera ' + tipo + ' — Cuadra ' + record.cuadra;
+      const tipo = record.type === 'praderas-caballos' ? 'Caballos' : 'Bovinos';
+      title.textContent = 'Editar Pradera ' + tipo + ' — ' + record.cuadra;
       html = `
         <div class="form-group">
-          <label>Cuadra</label>
-          <input type="number" id="edit-cuadra" value="${record.cuadra}" inputmode="numeric">
+          <label>Cuadra (ej: 11${record.type === 'praderas-caballos' ? 'C' : 'B'})</label>
+          <input type="text" id="edit-cuadra" value="${record.cuadra}">
         </div>
         <div class="form-group">
           <label>Cantidad de animales</label>
@@ -579,7 +641,8 @@ const App = (() => {
       r.diasDesdeUltimo = parseInt(document.getElementById('edit-diasDesdeUltimo').value) || null;
       r.observaciones = document.getElementById('edit-observaciones').value.trim();
     } else {
-      r.cuadra = parseInt(document.getElementById('edit-cuadra').value);
+      const tipo = r.type === 'praderas-caballos' ? 'caballos' : 'ganado';
+      r.cuadra = normalizeCuadraId(document.getElementById('edit-cuadra').value, tipo);
       r.cargaReal = parseInt(document.getElementById('edit-cargaReal').value) || null;
       r.aforo = parseFloat(document.getElementById('edit-aforo').value) || null;
       r.fechaIngreso = document.getElementById('edit-fechaIngreso').value;
@@ -809,9 +872,9 @@ const App = (() => {
     list.forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.cuadra;
-      const unit = tipo === 'caballos' ? ' m²' : ' Ha';
-      const areaText = c.area ? ' — ' + c.area + unit : '';
-      opt.textContent = 'Cuadra ' + c.cuadra + ' (' + especie + ')' + areaText;
+      const num = String(c.cuadra).replace(/[CB]$/i, '');
+      const areaText = c.area ? ' — ' + c.area + ' m²' : '';
+      opt.textContent = num + ' ' + especie + areaText;
       select.appendChild(opt);
     });
   }

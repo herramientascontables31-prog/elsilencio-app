@@ -9,17 +9,9 @@ const App = (() => {
   const STORE = 'records';
   const CONFIG_KEY = 'elsilencio_config';
   const BACKUP_KEY = 'elsilencio_backup';
+  const LAST_PESAJES_KEY = 'elsilencio_last_pesajes';
   const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxsweijU5TzsdDzK18JT-pduRqjTwTLgJkuXW_Ess0Et89OzNqzVBehQHdTjnwU_BZzzg/exec';
   const DEFAULT_ANIMALS = ['A001','A002','A003','A004','A006','A007','A008','A010','A011','A012','A014','A015'];
-
-  const LAST_PESAJE = {
-    'A001':{peso:322,fecha:'2025-07-10'},'A002':{peso:278,fecha:'2025-05-15'},
-    'A003':{peso:331,fecha:'2025-07-10'},'A004':{peso:271,fecha:'2025-05-15'},
-    'A006':{peso:263,fecha:'2025-06-01'},'A007':{peso:303,fecha:'2025-06-15'},
-    'A008':{peso:283,fecha:'2025-07-01'},'A010':{peso:287,fecha:'2025-07-15'},
-    'A011':{peso:255,fecha:'2025-06-01'},'A012':{peso:238,fecha:'2025-06-01'},
-    'A014':{peso:238,fecha:'2025-07-01'},'A015':{peso:250,fecha:'2025-07-01'}
-  };
 
   // Default offline para el primer arranque. Se reemplazan al primer sync con Sheet.
   const DEFAULT_CUADRAS_CABALLOS = [
@@ -110,10 +102,13 @@ const App = (() => {
     // Intentar sync inicial
     tryAutoSync();
 
-    // Refrescar cuadras desde Sheet aunque no haya pendientes
+    // Refrescar cuadras y últimos pesajes desde Sheet aunque no haya pendientes
     if (navigator.onLine) {
       const cfg = getConfig();
-      if (cfg.scriptUrl) loadCuadrasList(cfg.scriptUrl);
+      if (cfg.scriptUrl) {
+        loadCuadrasList(cfg.scriptUrl);
+        loadLastPesajesFromSheet(cfg.scriptUrl);
+      }
     }
   }
 
@@ -288,7 +283,7 @@ const App = (() => {
       const id = select.value;
       if (!id) return;
       getLastLocalPesaje(id).then(local => {
-        const source = local || LAST_PESAJE[id];
+        const source = local || getCachedLastPesaje(id);
         if (source) {
           document.getElementById('p-peso-ant').value = source.peso;
           const dias = Math.round((new Date() - new Date(source.fecha)) / 86400000);
@@ -299,6 +294,15 @@ const App = (() => {
         }
       });
     });
+  }
+
+  function getCachedLastPesaje(animalId) {
+    try {
+      const raw = localStorage.getItem(LAST_PESAJES_KEY);
+      if (!raw) return null;
+      const map = JSON.parse(raw);
+      return map[animalId.toUpperCase()] || null;
+    } catch { return null; }
   }
 
   async function getLastLocalPesaje(animalId) {
@@ -661,6 +665,7 @@ const App = (() => {
 
       loadAnimalList(config.scriptUrl);
       loadCuadrasList(config.scriptUrl);
+      loadLastPesajesFromSheet(config.scriptUrl);
     } catch (err) {
       toast('Error de sincronización. Se reintentará.', 'error');
       scheduleRetry();
@@ -732,6 +737,17 @@ const App = (() => {
     if (navigator.onLine && getConfig().scriptUrl) setTimeout(syncNow, 1500);
   }
 
+  async function loadLastPesajesFromSheet(scriptUrl) {
+    try {
+      const resp = await fetch(scriptUrl + '?action=getLastPesajes');
+      if (!resp.ok) return;
+      const data = await resp.json();
+      if (data && typeof data === 'object') {
+        localStorage.setItem(LAST_PESAJES_KEY, JSON.stringify(data));
+      }
+    } catch (e) { /* offline → usa cache existente */ }
+  }
+
   async function loadAnimalList(scriptUrl) {
     try {
       const resp = await fetch(scriptUrl + '?action=getAnimals');
@@ -789,12 +805,13 @@ const App = (() => {
     const select = document.getElementById(id);
     if (!select) return;
     select.innerHTML = '<option value="">-- Seleccionar --</option>';
+    const especie = tipo === 'caballos' ? 'Caballos' : 'Bovinos';
     list.forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.cuadra;
       const unit = tipo === 'caballos' ? ' m²' : ' Ha';
       const areaText = c.area ? ' — ' + c.area + unit : '';
-      opt.textContent = 'Cuadra ' + c.cuadra + areaText;
+      opt.textContent = 'Cuadra ' + c.cuadra + ' (' + especie + ')' + areaText;
       select.appendChild(opt);
     });
   }

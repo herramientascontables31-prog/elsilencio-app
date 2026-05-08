@@ -472,10 +472,8 @@ const App = (() => {
   // ==================== SAVE: PESAJE ====================
   function savePesaje(e) {
     e.preventDefault();
-    const idSelect = document.getElementById('p-id').value;
-    const idManual = document.getElementById('p-id-manual').value.trim();
-    const animalId = idSelect || idManual;
-    if (!animalId) { toast('Seleccione o escriba el ID del animal', 'error'); return false; }
+    const animalId = document.getElementById('p-id').value.trim();
+    if (!animalId) { toast('Escriba el número del arete', 'error'); return false; }
 
     const record = {
       type: 'pesajes',
@@ -827,14 +825,8 @@ const App = (() => {
   }
 
   function populateAnimalSelect(animals) {
-    const select = document.getElementById('p-id');
-    if (!select) return;
-    select.innerHTML = '<option value="">-- Seleccionar --</option>';
-    animals.forEach(id => {
-      const opt = document.createElement('option');
-      opt.value = id; opt.textContent = id;
-      select.appendChild(opt);
-    });
+    // Compat: el campo p-id pasó de <select> a <input> libre.
+    // Se conserva la firma para no romper loadAnimalList ni saveConfig.
   }
 
   // ==================== CUADRAS (DESDE SHEET) ====================

@@ -324,23 +324,29 @@ const App = (() => {
 
   // ==================== AUTO-FILL PESAJE ====================
   function setupAnimalAutoFill() {
-    const select = document.getElementById('p-id');
-    if (!select) return;
-    select.addEventListener('change', () => {
-      const id = select.value;
-      if (!id) return;
-      getLastLocalPesaje(id).then(local => {
-        const source = local || getCachedLastPesaje(id);
-        if (source) {
-          document.getElementById('p-peso-ant').value = source.peso;
-          const dias = Math.round((new Date() - new Date(source.fecha)) / 86400000);
-          document.getElementById('p-dias').value = dias;
-        } else {
-          document.getElementById('p-peso-ant').value = '';
-          document.getElementById('p-dias').value = '';
-        }
-      });
-    });
+    const input = document.getElementById('p-id');
+    const fecha = document.getElementById('p-fecha');
+    if (!input) return;
+    const run = async () => {
+      const id = input.value.trim().toUpperCase();
+      const pesoAntEl = document.getElementById('p-peso-ant');
+      const diasEl = document.getElementById('p-dias');
+      if (!id) { pesoAntEl.value = ''; diasEl.value = ''; return; }
+      const local = await getLastLocalPesaje(id);
+      const source = local || getCachedLastPesaje(id);
+      if (source) {
+        pesoAntEl.value = source.peso;
+        const ref = (fecha && fecha.value) ? new Date(fecha.value) : new Date();
+        const dias = Math.round((ref - new Date(source.fecha)) / 86400000);
+        diasEl.value = dias >= 0 ? dias : '';
+      } else {
+        pesoAntEl.value = '';
+        diasEl.value = '';
+      }
+    };
+    input.addEventListener('change', run);
+    input.addEventListener('blur', run);
+    if (fecha) fecha.addEventListener('change', () => { if (input.value.trim()) run(); });
   }
 
   function getCachedLastPesaje(animalId) {
@@ -348,14 +354,15 @@ const App = (() => {
       const raw = localStorage.getItem(LAST_PESAJES_KEY);
       if (!raw) return null;
       const map = JSON.parse(raw);
-      return map[animalId.toUpperCase()] || null;
+      return map[String(animalId).toUpperCase()] || null;
     } catch { return null; }
   }
 
   async function getLastLocalPesaje(animalId) {
+    const key = String(animalId).toUpperCase();
     const records = await getAllRecords();
     const pesajes = records
-      .filter(r => r.type === 'pesajes' && r.animalId === animalId)
+      .filter(r => r.type === 'pesajes' && String(r.animalId).toUpperCase() === key)
       .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
     return pesajes.length > 0 ? { peso: pesajes[0].pesoActual, fecha: pesajes[0].fecha } : null;
   }
@@ -825,8 +832,15 @@ const App = (() => {
   }
 
   function populateAnimalSelect(animals) {
-    // Compat: el campo p-id pasó de <select> a <input> libre.
-    // Se conserva la firma para no romper loadAnimalList ni saveConfig.
+    // El campo p-id es <input> libre con <datalist> para autocompletar.
+    const dl = document.getElementById('p-id-list');
+    if (!dl) return;
+    dl.innerHTML = '';
+    (animals || []).forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = String(a);
+      dl.appendChild(opt);
+    });
   }
 
   // ==================== CUADRAS (DESDE SHEET) ====================
